@@ -7,6 +7,8 @@ const healthRoutes = require("./routes/healthRoutes");
 const authRoutes = require("./routes/authRoutes");
 const workspaceRoutes = require("./routes/workspaceRoutes");
 const workflowRoutes = require("./routes/workflowRoutes");
+const commentRoutes = require("./routes/commentRoutes");
+const activityRoutes = require("./routes/activityRoutes");
 
 dotenv.config();
 
@@ -21,6 +23,8 @@ app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api", workflowRoutes);
+app.use("/api", commentRoutes);
+app.use("/api", activityRoutes);
 
 
 const startServer = async () => {
