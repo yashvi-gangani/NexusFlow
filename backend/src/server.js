@@ -1,6 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const http = require("http");
+
+const { initializeSocket } = require("./socket/socket");
 
 const connectDB = require("./config/db");
 const healthRoutes = require("./routes/healthRoutes");
@@ -9,6 +12,8 @@ const workspaceRoutes = require("./routes/workspaceRoutes");
 const workflowRoutes = require("./routes/workflowRoutes");
 const commentRoutes = require("./routes/commentRoutes");
 const activityRoutes = require("./routes/activityRoutes");
+const taskRoutes = require("./routes/taskRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 dotenv.config();
 
@@ -25,12 +30,17 @@ app.use("/api/workspaces", workspaceRoutes);
 app.use("/api", workflowRoutes);
 app.use("/api", commentRoutes);
 app.use("/api", activityRoutes);
-
+app.use("/api", taskRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 const startServer = async () => {
   await connectDB();
 
-  app.listen(PORT, () => {
+  const server = http.createServer(app);
+
+  initializeSocket(server);
+
+  server.listen(PORT, () => {
     console.log(`NexusFlow server running on port ${PORT}`);
   });
 };
