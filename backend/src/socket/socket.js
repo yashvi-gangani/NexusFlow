@@ -13,6 +13,10 @@ const initializeSocket = (server) => {
   io.on("connection", (socket) => {
     console.log(`Socket connected: ${socket.id}`);
 
+    socket.on("join-user", (userId) => {
+  socket.join(`user:${userId}`);
+});
+
     socket.on("join-workspace", (workspaceId) => {
       socket.join(`workspace:${workspaceId}`);
     });

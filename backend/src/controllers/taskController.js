@@ -4,6 +4,8 @@ const Task = require("../models/Task");
 const Workflow = require("../models/Workflow");
 const Workspace = require("../models/Workspace");
 const User = require("../models/User");
+const Activity = require("../models/Activity");
+const { createNotification } = require("../services/notificationService");
 
 // Create task
 const createTask = async (req, res) => {
@@ -127,6 +129,16 @@ const createTask = async (req, res) => {
       status,
       dueDate,
       createdBy: req.user.userId,
+    });
+
+    // Create activity log
+    await Activity.create({
+      workspace: task.workspace,
+      task: task._id,
+      workflow: task.workflow,
+      user: req.user.userId,
+      action: "TASK_CREATED",
+      description: `Created task "${task.title}"`,
     });
 
     const populatedTask = await Task.findById(task._id)
@@ -342,6 +354,16 @@ const updateTask = async (req, res) => {
 
     await task.save();
 
+    // Create activity log
+    await Activity.create({
+      workspace: task.workspace,
+      task: task._id,
+      workflow: task.workflow,
+      user: req.user.userId,
+      action: "TASK_UPDATED",
+      description: `Updated task "${task.title}"`,
+    });
+
     const updatedTask = await Task.findById(id)
       .populate("createdBy", "name email")
       .populate("assignedTo", "name email")
@@ -420,6 +442,16 @@ const moveTask = async (req, res) => {
     task.stage = stage;
 
     await task.save();
+
+    // Create activity log
+    await Activity.create({
+      workspace: task.workspace,
+      task: task._id,
+      workflow: task.workflow,
+      user: req.user.userId,
+      action: "TASK_MOVED",
+      description: `Moved task "${task.title}" to another stage`,
+    });
 
     const updatedTask = await Task.findById(id)
       .populate("createdBy", "name email")
@@ -505,7 +537,27 @@ const assignTask = async (req, res) => {
 
     task.assignedTo = assignedTo;
 
-    await task.save();
+await task.save();
+
+// Create activity log
+await Activity.create({
+  workspace: task.workspace,
+  task: task._id,
+  workflow: task.workflow,
+  user: req.user.userId,
+  action: "TASK_ASSIGNED",
+  description: `Assigned task "${task.title}" to ${user.name}`,
+});
+
+// Create notification for assigned user
+await createNotification({
+  recipient: assignedTo,
+  sender: req.user.userId,
+  workspace: task.workspace,
+  task: task._id,
+  type: "TASK_ASSIGNED",
+  message: `You were assigned the task "${task.title}"`,
+});
 
     const updatedTask = await Task.findById(id)
       .populate("createdBy", "name email")
@@ -561,7 +613,19 @@ const deleteTask = async (req, res) => {
       });
     }
 
+    const taskTitle = task.title;
+
     await Task.findByIdAndDelete(id);
+
+    // Create activity log
+    await Activity.create({
+      workspace: task.workspace,
+      task: task._id,
+      workflow: task.workflow,
+      user: req.user.userId,
+      action: "TASK_DELETED",
+      description: `Deleted task "${taskTitle}"`,
+    });
 
     res.status(200).json({
       success: true,
