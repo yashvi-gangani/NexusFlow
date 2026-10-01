@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import workspaceService from "../services/workspaceService";
+import NotificationBell from "../components/NotificationBell";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -86,7 +87,19 @@ const Dashboard = () => {
           <p>Welcome, {user?.name}</p>
         </div>
 
-        <button onClick={handleLogout}>Logout</button>
+        <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: "15px",
+  }}
+>
+  <NotificationBell />
+
+  <button onClick={handleLogout}>
+    Logout
+  </button>
+</div>
       </header>
 
       <section>
