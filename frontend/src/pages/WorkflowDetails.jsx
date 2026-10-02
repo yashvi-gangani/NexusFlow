@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import workflowService from "../services/workflowService";
 import taskService from "../services/taskService";
 import workspaceService from "../services/workspaceService";
+import socket from "../services/socket";
 
 const WorkflowDetails = () => {
   const { workflowId } = useParams();
@@ -38,15 +39,13 @@ const WorkflowDetails = () => {
   };
 
   const loadTasks = async () => {
-    const data =
-      await taskService.getWorkflowTasks(workflowId);
+    const data = await taskService.getWorkflowTasks(workflowId);
 
     setTasks(data.tasks || data.data || []);
   };
 
   const loadWorkspace = async (workspaceId) => {
-    const data =
-      await workspaceService.getWorkspace(workspaceId);
+    const data = await workspaceService.getWorkspace(workspaceId);
 
     setWorkspace(data.workspace || data.data);
   };
@@ -75,6 +74,133 @@ const WorkflowDetails = () => {
   useEffect(() => {
     loadData();
   }, [workflowId]);
+
+  // Real-time workspace task updates
+  useEffect(() => {
+    if (!workspace?._id) {
+      return;
+    }
+
+    const workspaceId = workspace._id;
+
+    const getTaskWorkflowId = (task) => {
+      if (!task?.workflow) {
+        return null;
+      }
+
+      if (typeof task.workflow === "object") {
+        return task.workflow._id?.toString();
+      }
+
+      return task.workflow.toString();
+    };
+
+    const isCurrentWorkflowTask = (task) => {
+      return (
+        getTaskWorkflowId(task) === workflowId.toString()
+      );
+    };
+
+    const handleTaskCreated = (task) => {
+      if (!isCurrentWorkflowTask(task)) {
+        return;
+      }
+
+      setTasks((currentTasks) => {
+        const alreadyExists = currentTasks.some(
+          (currentTask) =>
+            currentTask._id === task._id
+        );
+
+        if (alreadyExists) {
+          return currentTasks;
+        }
+
+        return [task, ...currentTasks];
+      });
+    };
+
+    const handleTaskUpdated = (updatedTask) => {
+      if (!isCurrentWorkflowTask(updatedTask)) {
+        return;
+      }
+
+      setTasks((currentTasks) =>
+        currentTasks.map((task) =>
+          task._id === updatedTask._id
+            ? updatedTask
+            : task
+        )
+      );
+    };
+
+    const handleTaskMoved = (movedTask) => {
+      if (!isCurrentWorkflowTask(movedTask)) {
+        return;
+      }
+
+      setTasks((currentTasks) =>
+        currentTasks.map((task) =>
+          task._id === movedTask._id
+            ? movedTask
+            : task
+        )
+      );
+    };
+
+    const handleTaskAssigned = (assignedTask) => {
+      if (!isCurrentWorkflowTask(assignedTask)) {
+        return;
+      }
+
+      setTasks((currentTasks) =>
+        currentTasks.map((task) =>
+          task._id === assignedTask._id
+            ? assignedTask
+            : task
+        )
+      );
+    };
+
+    const handleTaskDeleted = ({ taskId }) => {
+      setTasks((currentTasks) =>
+        currentTasks.filter(
+          (task) => task._id !== taskId
+        )
+      );
+    };
+
+    const joinWorkspace = () => {
+      socket.emit("join-workspace", workspaceId);
+    };
+
+    if (socket.connected) {
+      joinWorkspace();
+    } else {
+      socket.once("connect", joinWorkspace);
+      socket.connect();
+    }
+
+    socket.on("task-created", handleTaskCreated);
+    socket.on("task-updated", handleTaskUpdated);
+    socket.on("task-moved", handleTaskMoved);
+    socket.on("task-assigned", handleTaskAssigned);
+    socket.on("task-deleted", handleTaskDeleted);
+
+    return () => {
+      socket.off("task-created", handleTaskCreated);
+      socket.off("task-updated", handleTaskUpdated);
+      socket.off("task-moved", handleTaskMoved);
+      socket.off("task-assigned", handleTaskAssigned);
+      socket.off("task-deleted", handleTaskDeleted);
+
+      socket.off("connect", joinWorkspace);
+
+      if (socket.connected) {
+        socket.emit("leave-workspace", workspaceId);
+      }
+    };
+  }, [workspace?._id, workflowId]);
 
   const openCreateTask = (stageId) => {
     setSelectedStage(stageId);
@@ -113,6 +239,7 @@ const WorkflowDetails = () => {
 
       resetTaskForm();
 
+      // Keep the existing API refresh as a fallback.
       await loadTasks();
     } catch (error) {
       setError(
@@ -127,6 +254,8 @@ const WorkflowDetails = () => {
   const handleMoveTask = async (taskId, stageId) => {
     try {
       await taskService.moveTask(taskId, stageId);
+
+      // Keep the existing API refresh as a fallback.
       await loadTasks();
     } catch (error) {
       setError(
@@ -347,6 +476,7 @@ const WorkflowDetails = () => {
             <h2>Create Task</h2>
 
             <label>Title</label>
+
             <input
               type="text"
               value={taskTitle}
@@ -360,6 +490,7 @@ const WorkflowDetails = () => {
             <br />
 
             <label>Description</label>
+
             <textarea
               value={taskDescription}
               onChange={(e) =>
@@ -372,6 +503,7 @@ const WorkflowDetails = () => {
             <br />
 
             <label>Priority</label>
+
             <select
               value={priority}
               onChange={(e) =>
@@ -388,6 +520,7 @@ const WorkflowDetails = () => {
             <br />
 
             <label>Assign To</label>
+
             <select
               value={assignedTo}
               onChange={(e) =>
@@ -420,6 +553,7 @@ const WorkflowDetails = () => {
             <br />
 
             <label>Due Date</label>
+
             <input
               type="date"
               value={dueDate}

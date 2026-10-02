@@ -6,6 +6,7 @@ const Workspace = require("../models/Workspace");
 const User = require("../models/User");
 const Activity = require("../models/Activity");
 const { createNotification } = require("../services/notificationService");
+const { emitToWorkspace } = require("../socket/socket");
 
 // Create task
 const createTask = async (req, res) => {
@@ -146,6 +147,13 @@ const createTask = async (req, res) => {
       .populate("assignedTo", "name email")
       .populate("workflow", "name")
       .populate("workspace", "name");
+
+    // Real-time task creation event
+    emitToWorkspace(
+      task.workspace,
+      "task-created",
+      populatedTask
+    );
 
     res.status(201).json({
       success: true,
@@ -370,6 +378,13 @@ const updateTask = async (req, res) => {
       .populate("workflow", "name")
       .populate("workspace", "name");
 
+    // Real-time task update event
+    emitToWorkspace(
+      task.workspace,
+      "task-updated",
+      updatedTask
+    );
+
     res.status(200).json({
       success: true,
       message: "Task updated successfully",
@@ -459,6 +474,13 @@ const moveTask = async (req, res) => {
       .populate("workflow", "name")
       .populate("workspace", "name");
 
+    // Real-time task move event
+    emitToWorkspace(
+      task.workspace,
+      "task-moved",
+      updatedTask
+    );
+
     res.status(200).json({
       success: true,
       message: "Task moved successfully",
@@ -537,33 +559,40 @@ const assignTask = async (req, res) => {
 
     task.assignedTo = assignedTo;
 
-await task.save();
+    await task.save();
 
-// Create activity log
-await Activity.create({
-  workspace: task.workspace,
-  task: task._id,
-  workflow: task.workflow,
-  user: req.user.userId,
-  action: "TASK_ASSIGNED",
-  description: `Assigned task "${task.title}" to ${user.name}`,
-});
+    // Create activity log
+    await Activity.create({
+      workspace: task.workspace,
+      task: task._id,
+      workflow: task.workflow,
+      user: req.user.userId,
+      action: "TASK_ASSIGNED",
+      description: `Assigned task "${task.title}" to ${user.name}`,
+    });
 
-// Create notification for assigned user
-await createNotification({
-  recipient: assignedTo,
-  sender: req.user.userId,
-  workspace: task.workspace,
-  task: task._id,
-  type: "TASK_ASSIGNED",
-  message: `You were assigned the task "${task.title}"`,
-});
+    // Create notification for assigned user
+    await createNotification({
+      recipient: assignedTo,
+      sender: req.user.userId,
+      workspace: task.workspace,
+      task: task._id,
+      type: "TASK_ASSIGNED",
+      message: `You were assigned the task "${task.title}"`,
+    });
 
     const updatedTask = await Task.findById(id)
       .populate("createdBy", "name email")
       .populate("assignedTo", "name email")
       .populate("workflow", "name")
       .populate("workspace", "name");
+
+    // Real-time task assignment event
+    emitToWorkspace(
+      task.workspace,
+      "task-assigned",
+      updatedTask
+    );
 
     res.status(200).json({
       success: true,
@@ -614,18 +643,29 @@ const deleteTask = async (req, res) => {
     }
 
     const taskTitle = task.title;
+    const workspaceId = task.workspace;
+    const taskId = task._id;
 
     await Task.findByIdAndDelete(id);
 
     // Create activity log
     await Activity.create({
-      workspace: task.workspace,
-      task: task._id,
+      workspace: workspaceId,
+      task: taskId,
       workflow: task.workflow,
       user: req.user.userId,
       action: "TASK_DELETED",
       description: `Deleted task "${taskTitle}"`,
     });
+
+    // Real-time task deletion event
+    emitToWorkspace(
+      workspaceId,
+      "task-deleted",
+      {
+        taskId: taskId.toString(),
+      }
+    );
 
     res.status(200).json({
       success: true,
