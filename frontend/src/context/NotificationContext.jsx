@@ -17,11 +17,17 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Store IDs of currently online users.
+  const [onlineUsers, setOnlineUsers] = useState([]);
+
   useEffect(() => {
     if (!user) {
       socket.disconnect();
+
       setNotifications([]);
       setUnreadCount(0);
+      setOnlineUsers([]);
+
       return;
     }
 
@@ -61,12 +67,50 @@ export const NotificationProvider = ({ children }) => {
       setUnreadCount((current) => current + 1);
     };
 
-    socket.on("notification", handleNotification);
+    const handleWorkspacePresence = ({
+      onlineUsers: users,
+    }) => {
+      setOnlineUsers(users || []);
+    };
+
+    const handleUserOffline = ({ userId }) => {
+      setOnlineUsers((currentUsers) =>
+        currentUsers.filter(
+          (currentUserId) =>
+            currentUserId !== userId
+        )
+      );
+    };
+
+    socket.on(
+      "notification",
+      handleNotification
+    );
+
+    socket.on(
+      "workspace-presence",
+      handleWorkspacePresence
+    );
+
+    socket.on(
+      "user-offline",
+      handleUserOffline
+    );
 
     return () => {
       socket.off(
         "notification",
         handleNotification
+      );
+
+      socket.off(
+        "workspace-presence",
+        handleWorkspacePresence
+      );
+
+      socket.off(
+        "user-offline",
+        handleUserOffline
       );
 
       socket.disconnect();
@@ -82,7 +126,10 @@ export const NotificationProvider = ({ children }) => {
       setNotifications((current) =>
         current.map((notification) =>
           notification._id === notificationId
-            ? { ...notification, isRead: true }
+            ? {
+                ...notification,
+                isRead: true,
+              }
             : notification
         )
       );
@@ -100,7 +147,9 @@ export const NotificationProvider = ({ children }) => {
 
   const markAllAsRead = async () => {
     try {
-      await api.put("/notifications/read-all");
+      await api.put(
+        "/notifications/read-all"
+      );
 
       setNotifications((current) =>
         current.map((notification) => ({
@@ -123,6 +172,7 @@ export const NotificationProvider = ({ children }) => {
       value={{
         notifications,
         unreadCount,
+        onlineUsers,
         markAsRead,
         markAllAsRead,
       }}
