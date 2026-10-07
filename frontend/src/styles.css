@@ -1,0 +1,35 @@
+:root { --bg:#e6eaee; --panel:#f6f8f9; --ink:#1b2830; --muted:#5d6c76; --line:#c5ced6;
+  --source:#0f7c80; --filter:#3b5b8c; --sink:#c2410c; --ok:#17794a; --bad:#b42318; }
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body { font-family: 'Barlow', system-ui, sans-serif; color: var(--ink); background: var(--bg); }
+.app { display: grid; grid-template-columns: 220px 1fr 300px; height: 100%; }
+aside { background: var(--panel); padding: 16px; overflow: auto; }
+.palette { border-right: 1px solid var(--line); }
+.json { border-left: 1px solid var(--line); }
+h1 { font: 700 28px 'Barlow Condensed', sans-serif; margin: 0 0 4px; }
+h2 { font: 600 15px 'Barlow Condensed', sans-serif; margin: 18px 0 8px; color: var(--muted); }
+.hint { color: var(--muted); font-size: 14px; margin: 0; }
+.chip { padding: 9px 12px; margin-bottom: 8px; background: #fff; border: 1px solid var(--line); border-left-width: 5px;
+  border-radius: 3px; cursor: grab; font-weight: 500; }
+.chip:active { cursor: grabbing; }
+.chip.source, .fnode.source { border-left-color: var(--source); }
+.chip.filter, .fnode.filter { border-left-color: var(--filter); }
+.chip.sink, .fnode.sink { border-left-color: var(--sink); }
+.canvas { position: relative; }
+.toolbar { position: absolute; z-index: 5; top: 12px; left: 12px; display: flex; gap: 8px; }
+.toolbar input { width: 260px; }
+input, select, button { font: inherit; padding: 6px 9px; border: 1px solid var(--line); border-radius: 3px; background: #fff; color: var(--ink); }
+button { cursor: pointer; font-weight: 500; }
+button.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+:is(input, select, button):focus-visible { outline: 2px solid var(--filter); outline-offset: 1px; }
+.empty { position: absolute; z-index: 4; inset: 0; display: grid; place-items: center; pointer-events: none; color: var(--muted); font-size: 18px; }
+.fnode { min-width: 190px; background: #fff; border: 1px solid var(--line); border-left-width: 6px; border-radius: 3px; padding: 10px 12px; }
+.fnode-title { font: 700 17px 'Barlow Condensed', sans-serif; margin-bottom: 6px; }
+.fnode-field { display: grid; gap: 2px; margin-bottom: 6px; font-size: 12px; color: var(--muted); }
+.fnode-field input, .fnode-field select { font-size: 14px; padding: 4px 6px; }
+.react-flow__handle { width: 10px; height: 10px; background: var(--ink); }
+ul { padding-left: 18px; font-size: 13px; margin: 0; } ul.ok { color: var(--ok); } ul.bad { color: var(--bad); }
+pre { font-size: 11.5px; background: #fff; border: 1px solid var(--line); padding: 10px; overflow: auto; max-height: 55vh; border-radius: 3px; }
+@media (max-width: 900px) { .app { grid-template-columns: 160px 1fr; } .json { display: none; } }
