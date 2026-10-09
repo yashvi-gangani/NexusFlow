@@ -1,4 +1,4 @@
-# NexusFlow - Visual IoT Telemetry & Rule Engine (through Mid-Project Review)
+# NexusFlow - Visual IoT Telemetry 
 
 Scope delivered: Week 1, Week 2 and Mid-Project Review deliverables.
 
