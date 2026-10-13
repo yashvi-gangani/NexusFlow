@@ -1,4 +1,4 @@
-# NexusFlow - Visual IoT Telemetry 
+# NexusFlow - Visual IoT Telemetry (group project)
 
 Scope delivered: Week 1, Week 2 and Mid-Project Review deliverables.
 
